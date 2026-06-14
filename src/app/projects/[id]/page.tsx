@@ -362,14 +362,15 @@ export default function ProjectDetailPage() {
     },
     {
       header: "",
-      accessor: "view",
+      accessor: "view" as keyof Deployment,
       className: "text-right w-20",
-      renderCell: () => (
+      renderCell: (row) => (
         <Button
           size="sm"
           variant="secondary"
           width="w-auto"
           className="cursor-pointer"
+          onClick={() => router.push(`/deployments/${row.id.replace("#", "")}`)}
         >
           View
         </Button>

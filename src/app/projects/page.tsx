@@ -7,9 +7,10 @@ import { Button } from "@/components/atoms/Button/Button";
 import { InputField } from "@/components/atoms/InputField/InputField";
 import { Tabs, TabData } from "@/components/atoms/Tabs/Tabs";
 import { Search, Plus } from "lucide-react";
+import { CreateProjectModal } from "@/components/organisms/CreateProjectModal/CreateProjectModal";
 
 // Mock Projects data representing all 6 projects shown in Image 3
-const PROJECTS_DATA: Project[] = [
+const INITIAL_PROJECTS: Project[] = [
   {
     id: "harbor-api",
     name: "harbor-api",
@@ -87,18 +88,20 @@ const PROJECTS_DATA: Project[] = [
 type FilterType = "all" | "active" | "degraded" | "archived";
 
 const FILTER_TABS: TabData[] = [
-  ["all", "All (6)"],
-  ["active", "Active (5)"],
-  ["degraded", "Degraded (1)"],
+  ["all", "All"],
+  ["active", "Active"],
+  ["degraded", "Degraded"],
   ["archived", "Archived"],
 ];
 
 export default function ProjectsPage() {
+  const [projects, setProjects] = useState<Project[]>(INITIAL_PROJECTS);
   const [filter, setFilter] = useState<FilterType>("all");
   const [localSearch, setLocalSearch] = useState("");
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
 
   // Filter project cards logic
-  const filteredProjects = PROJECTS_DATA.filter((proj) => {
+  const filteredProjects = projects.filter((proj) => {
     // Local search matches name or description
     const matchesSearch =
       proj.name.toLowerCase().includes(localSearch.toLowerCase()) ||
@@ -114,10 +117,26 @@ export default function ProjectsPage() {
     return true; // "all"
   });
 
+  const handleCreateProject = (newProj: Project) => {
+    setProjects((prev) => [newProj, ...prev]);
+  };
+
+  const allCount = projects.length;
+  const activeCount = projects.filter(p => p.status === "healthy").length;
+  const degradedCount = projects.filter(p => p.status === "degraded" || p.status === "error").length;
+  const archivedCount = 0;
+
+  const filterTabsWithCounts: TabData[] = [
+    ["all", `All (${allCount})`],
+    ["active", `Active (${activeCount})`],
+    ["degraded", `Degraded (${degradedCount})`],
+    ["archived", `Archived (${archivedCount})`],
+  ];
+
   return (
     <AppLayout searchPlaceholder="Search projects in workspace...">
       {/* Top Header */}
-      <div className="flex justify-between items-center mb-5 select-none">
+      <div className="flex justify-between items-center mb-5 select-none animate-fade-in">
         <h1 className="text-[22px] font-medium text-[#1a1a1a]">
           Projects
         </h1>
@@ -127,6 +146,7 @@ export default function ProjectsPage() {
           icon={<Plus size={14} className="stroke-[3]" />}
           width="w-auto"
           className="cursor-pointer"
+          onClick={() => setIsCreateOpen(true)}
         >
           New Project
         </Button>
@@ -146,14 +166,14 @@ export default function ProjectsPage() {
 
         {/* Tab Filters */}
         <Tabs
-          data={FILTER_TABS}
+          data={filterTabsWithCounts}
           activeTab={filter}
           setActiveTab={(val) => setFilter(val as FilterType)}
         />
       </div>
 
       {/* Projects Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 select-none">
         {filteredProjects.map((proj) => (
           <ProjectCard key={proj.id} project={proj} />
         ))}
@@ -161,13 +181,20 @@ export default function ProjectsPage() {
 
       {/* Empty State */}
       {filteredProjects.length === 0 && (
-        <div className="bg-white border border-black/5 rounded-md p-16 text-center select-none">
+        <div className="bg-white border border-black/5 rounded-md p-16 text-center select-none animate-scale-in">
           <p className="text-sm font-medium text-[#6b5e52]">No projects found</p>
           <p className="text-xs text-[#8a7f75] mt-1">
             Try adjusting your search criteria or tabs filter.
           </p>
         </div>
       )}
+
+      {/* Create Project Modal Wizard */}
+      <CreateProjectModal
+        isOpen={isCreateOpen}
+        onClose={() => setIsCreateOpen(false)}
+        onCreate={handleCreateProject}
+      />
     </AppLayout>
   );
 }
