@@ -275,7 +275,7 @@ export default function ProjectDetailPage() {
           <Button
             size="sm"
             variant="secondary"
-            onClick={() => router.push("/history")}
+            onClick={() => router.push(`/projects/${projectName}/environments/${row.name}`)}
             width="w-auto"
             className="cursor-pointer"
           >
