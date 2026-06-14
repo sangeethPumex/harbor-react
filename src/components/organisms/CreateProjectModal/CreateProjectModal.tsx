@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { X, ChevronRight, ChevronLeft, Check, HelpCircle, Server, Database, Folder, Shield, Cloud } from "lucide-react";
 import { Button } from "@/components/atoms/Button/Button";
 import { InputField } from "@/components/atoms/InputField/InputField";
@@ -63,8 +64,15 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
   const [awsResource, setAwsResource] = useState("i-08fdf90290c60e790");
 
   const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    return () => setMounted(false);
+  }, []);
 
   if (!isOpen) return null;
+  if (!mounted) return null;
 
   const toggleMember = (name: string) => {
     if (selectedMembers.includes(name)) {
@@ -111,8 +119,8 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
     onClose();
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-2xs p-4 select-none">
+  return createPortal(
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-2xs p-4 select-none">
       <motion.div
         initial={{ opacity: 0, scale: 0.95, y: 15 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -699,6 +707,7 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
           </div>
         </div>
       </motion.div>
-    </div>
+    </div>,
+    document.body
   );
 };
