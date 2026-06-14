@@ -1,0 +1,11 @@
+<svg width="130" height="32" viewBox="0 0 130 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Four Circle Geometric Icon -->
+  <g transform="translate(4, 4)">
+    <circle cx="6" cy="6" r="5" fill="#d08873" />
+    <circle cx="18" cy="6" r="5" fill="#d08873" fill-opacity="0.65" />
+    <circle cx="6" cy="18" r="5" fill="#d08873" fill-opacity="0.65" />
+    <circle cx="18" cy="18" r="5" fill="#d08873" />
+  </g>
+  <!-- Brand Name Typography -->
+  <text x="40" y="23" font-family="system-ui, -apple-system, sans-serif" font-weight="800" font-size="20" fill="#2d2d2d">Harbor<tspan fill="#d08873">.</tspan></text>
+</svg>

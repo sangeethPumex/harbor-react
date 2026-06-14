@@ -1,0 +1,66 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: var(--font-gabarito), system-ui, sans-serif;
+  
+  --color-primary: #d08873;
+  --color-primary-hover: #be7560;
+  --color-primary-light: #f5ece9;
+  --color-secondary: #8e7a6f;
+  --color-secondary-hover: #7d695e;
+  --color-brand-bg: #faf9f8;
+  --color-border-warm: #eae6e2;
+  --color-text-dark: #2d2d2d;
+  --color-text-muted: #626262;
+  --color-text-light: #918a84;
+  
+  --color-status-success-bg: #e8f5e9;
+  --color-status-success-text: #2e7d32;
+  --color-status-warning-bg: #fff3e0;
+  --color-status-warning-text: #e65100;
+  --color-status-danger-bg: #ffebee;
+  --color-status-danger-text: #c62828;
+  --color-status-info-bg: #e3f2fd;
+  --color-status-info-text: #1565c0;
+}
+
+:root {
+  --background: #faf9f8;
+  --foreground: #2d2d2d;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  overflow-x: hidden;
+}
+
+/* Custom micro-animations */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { transform: translateY(12px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes scaleIn {
+  from { transform: scale(0.97); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-slide-up {
+  animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-scale-in {
+  animation: scaleIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
