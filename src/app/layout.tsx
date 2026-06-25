@@ -13,6 +13,8 @@ export const metadata: Metadata = {
   description: "Secure workspace and environment manager",
 };
 
+import { ToastProvider } from "@/components/atoms/Toast/Toast";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -23,7 +25,9 @@ export default function RootLayout({
       lang="en"
       className={`${gabarito.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        <ToastProvider>{children}</ToastProvider>
+      </body>
     </html>
   );
 }

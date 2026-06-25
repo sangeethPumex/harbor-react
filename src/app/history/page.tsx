@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Download, Calendar } from "lucide-react";
 import { AppLayout } from "@/components/templates/AppLayout/AppLayout";
 import { Button } from "@/components/atoms/Button/Button";
@@ -145,6 +146,7 @@ const STATUS_TABS: TabData[] = [
 ];
 
 export default function HistoryPage() {
+  const router = useRouter();
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [projectFilter, setProjectFilter] = useState("all");
   const [envFilter, setEnvFilter] = useState("all");
@@ -253,12 +255,13 @@ export default function HistoryPage() {
       header: "",
       accessor: "actions",
       className: "text-right w-20",
-      renderCell: () => (
+      renderCell: (row) => (
         <Button
           size="sm"
           variant="secondary"
           width="w-auto"
           className="cursor-pointer"
+          onClick={() => router.push(`/deployments/${row.id.replace("#", "")}`)}
         >
           View
         </Button>

@@ -1,12 +1,34 @@
 "use client";
 
 import React, { useState } from "react";
-import { UserPlus, Search, Edit2, Trash2, Mail } from "lucide-react";
+import { UserPlus, Mail, Trash2 } from "lucide-react";
 import { AppLayout } from "@/components/templates/AppLayout/AppLayout";
 import { Button } from "@/components/atoms/Button/Button";
 import { InputField } from "@/components/atoms/InputField/InputField";
 import { Badge } from "@/components/atoms/Badge/Badge";
 import { DataTable } from "@/components/organisms/DataTable/DataTable";
+import { CreateUserModal } from "@/components/organisms/CreateUserModal/CreateUserModal";
+import { useToast } from "@/components/atoms/Toast/Toast";
+
+const GithubIcon: React.FC<{ size?: number; className?: string }> = ({
+  size = 14,
+  className = "",
+}) => (
+  <svg
+    height={size}
+    width={size}
+    viewBox="0 0 16 16"
+    version="1.1"
+    aria-hidden="true"
+    className={className}
+    fill="currentColor"
+  >
+    <path
+      fillRule="evenodd"
+      d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"
+    />
+  </svg>
+);
 
 interface Member {
   id: string;
@@ -18,6 +40,9 @@ interface Member {
   lastActive: string;
   status: "Active" | "Pending";
   bgColor: string;
+  role_id?: string;
+  github_username?: string;
+  requires_github_access?: boolean;
 }
 
 const INITIAL_MEMBERS: Member[] = [
@@ -82,6 +107,8 @@ export default function UsersPage() {
   const [members, setMembers] = useState<Member[]>(INITIAL_MEMBERS);
   const [inviteEmail, setInviteEmail] = useState("");
   const [isInviteOpen, setIsInviteOpen] = useState(true);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const { toast } = useToast();
 
   const handleSendInvite = (e: React.FormEvent) => {
     e.preventDefault();
@@ -98,26 +125,56 @@ export default function UsersPage() {
       lastActive: "Never",
       status: "Pending",
       bgColor: "bg-gray-400",
+      requires_github_access: false,
     };
 
     setMembers([...members, newMember]);
     setInviteEmail("");
+    toast("Pending invite sent successfully!");
+  };
+
+  const handleCreateUser = (newUser: {
+    name: string;
+    email: string;
+    role_id: string;
+    role_name: string;
+    github_username?: string;
+    requires_github_access: boolean;
+  }) => {
+    const newMember: Member = {
+      id: Date.now().toString(),
+      name: newUser.name,
+      initials: newUser.name.substring(0, 2).toUpperCase(),
+      email: newUser.email,
+      role: newUser.role_name as Member["role"],
+      projects: "None",
+      lastActive: "Never",
+      status: "Pending",
+      bgColor: "bg-[#dfd0be]",
+      role_id: newUser.role_id,
+      github_username: newUser.github_username,
+      requires_github_access: newUser.requires_github_access,
+    };
+
+    setMembers([...members, newMember]);
   };
 
   const handleDeleteMember = (id: string) => {
     setMembers(members.filter((m) => m.id !== id));
+    toast("Member removed successfully.");
   };
 
   const handleRoleChange = (id: string, newRole: Member["role"]) => {
-    setMembers(
-      members.map((m) => (m.id === id ? { ...m, role: newRole } : m))
-    );
+    setMembers(members.map((m) => (m.id === id ? { ...m, role: newRole } : m)));
   };
 
-  const activeCount = members.filter((m) => m.status === "Active").length;
-  const pendingCount = members.filter((m) => m.status === "Pending").length;
+  const activeMembers = members.filter((m) => m.status === "Active");
+  const pendingMembers = members.filter((m) => m.status === "Pending");
 
-  const columns = [
+  const activeCount = activeMembers.length;
+  const pendingCount = pendingMembers.length;
+
+  const activeColumns = [
     {
       header: "Member",
       accessor: "name" as keyof Member,
@@ -174,8 +231,18 @@ export default function UsersPage() {
               <option value="Viewer">Viewer</option>
             </select>
             <div className="absolute inset-y-0 right-0 pr-2 flex items-center pointer-events-none text-[#8a7f75]">
-              <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 9l-7 7-7-7" />
+              <svg
+                className="h-3 w-3"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2.5"
+                  d="M19 9l-7 7-7-7"
+                />
               </svg>
             </div>
           </div>
@@ -201,7 +268,7 @@ export default function UsersPage() {
       accessor: "status" as keyof Member,
       renderCell: (row: Member) => (
         <Badge
-          variant={row.status === "Active" ? "success" : "warning"}
+          variant="success"
           showDot={false}
           className="text-xs font-medium rounded-sm px-2 py-0.5"
         >
@@ -238,6 +305,97 @@ export default function UsersPage() {
     },
   ];
 
+  const pendingColumns = [
+    {
+      header: "Member",
+      accessor: "name" as keyof Member,
+      renderCell: (row: Member) => (
+        <div className="flex items-center gap-3">
+          <div
+            className={`h-8 w-8 rounded-full flex items-center justify-center text-white text-xs font-semibold ${row.bgColor}`}
+          >
+            {row.initials}
+          </div>
+          <span className="font-semibold text-[#1a1a1a] text-sm">
+            {row.name}
+          </span>
+        </div>
+      ),
+    },
+    {
+      header: "Email",
+      accessor: "email" as keyof Member,
+      renderCell: (row: Member) => (
+        <span className="text-sm text-[#6b5e52]">{row.email}</span>
+      ),
+    },
+    {
+      header: "Role",
+      accessor: "role" as keyof Member,
+      renderCell: (row: Member) => (
+        <span className="bg-[#fdfcf9] border border-black/5 text-[#8a7f75] text-[11px] font-semibold px-2 py-0.5 rounded-sm">
+          {row.role}
+        </span>
+      ),
+    },
+    {
+      header: "GitHub Username",
+      accessor: "github_username" as keyof Member,
+      renderCell: (row: Member) => {
+        if (row.requires_github_access && row.github_username) {
+          return (
+            <span className="text-sm text-[#2b2622] flex items-center gap-1.5">
+              <GithubIcon size={12} className="text-[#8a7f75]" />
+              {row.github_username}
+            </span>
+          );
+        }
+        return <span className="text-sm text-[#8a7f75] italic">N/A</span>;
+      },
+    },
+    {
+      header: "GitHub Access",
+      accessor: "requires_github_access" as keyof Member,
+      renderCell: (row: Member) => (
+        <Badge
+          variant={row.requires_github_access ? "success" : "neutral"}
+          showDot={false}
+          className="text-xs font-medium rounded-sm px-2 py-0.5"
+        >
+          {row.requires_github_access ? "Required" : "Not Required"}
+        </Badge>
+      ),
+    },
+    {
+      header: "Status",
+      accessor: "status" as keyof Member,
+      renderCell: (row: Member) => (
+        <Badge
+          variant="warning"
+          showDot={false}
+          className="text-xs font-medium rounded-sm px-2 py-0.5"
+        >
+          {row.status}
+        </Badge>
+      ),
+    },
+    {
+      header: "Actions",
+      accessor: "id" as keyof Member,
+      renderCell: (row: Member) => (
+        <Button
+          size="sm"
+          variant="secondary"
+          onClick={() => handleDeleteMember(row.id)}
+          className="px-2.5 py-1 text-xs text-[#c62828] hover:bg-[#ffebee] border border-[#c62828]/20 hover:border-[#c62828]/40 rounded-md cursor-pointer"
+          width="w-auto"
+        >
+          Cancel Invite
+        </Button>
+      ),
+    },
+  ];
+
   return (
     <AppLayout searchPlaceholder="Search members...">
       {/* Page Heading */}
@@ -255,6 +413,7 @@ export default function UsersPage() {
           size="sm"
           variant="secondary"
           icon={<UserPlus size={14} />}
+          onClick={() => setIsCreateModalOpen(true)}
           className="cursor-pointer font-medium border border-black/5 hover:bg-[#faf9f8] text-sm text-[#2b2622]"
           width="w-auto"
         >
@@ -262,51 +421,33 @@ export default function UsersPage() {
         </Button>
       </div>
 
-      {/* Invite Component */}
-      {isInviteOpen && (
-        <form
-          onSubmit={handleSendInvite}
-          className="mb-5 bg-[#fbf5f2] border border-[#d08873]/15 rounded-md p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 animate-slide-up"
-        >
-          <div className="flex flex-col">
-            <h3 className="text-sm font-semibold text-[#1a1a1a]">
-              Invite a new team member to view
-            </h3>
-            <p className="text-xs text-[#6b5e52] mt-0.5">
-              They'll receive an email to set up their account and PIN.
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <div className="w-64">
-              <InputField
-                type="email"
-                placeholder="colleague@harbor.com"
-                value={inviteEmail}
-                onChange={(e) => setInviteEmail(e.target.value)}
-                iconLeft={<Mail size={14} className="text-[#8a7f75]" />}
-                className="bg-white text-xs h-9"
-              />
-            </div>
-            <Button
-              type="submit"
-              variant="primary"
-              className="text-xs h-9 cursor-pointer"
-              width="w-auto"
-            >
-              Send Invite
-            </Button>
-          </div>
-        </form>
-      )}
-
-      {/* Table Container */}
-      <div className="bg-white border border-black/5 rounded-md p-4">
+      {/* Active Members Table Container */}
+      <div className="bg-white border border-black/5 rounded-md p-4 mb-6">
         <h2 className="text-sm font-semibold text-[#1a1a1a] mb-4 select-none">
           Active Members
         </h2>
-        <DataTable columns={columns} data={members} pageSize={10} />
+        <DataTable columns={activeColumns} data={activeMembers} pageSize={10} />
       </div>
+
+      {/* Pending Users Table Container */}
+      <div className="bg-white border border-black/5 rounded-md p-4">
+        <h2 className="text-sm font-semibold text-[#1a1a1a] mb-4 select-none">
+          Pending Users
+        </h2>
+        <DataTable
+          columns={pendingColumns}
+          data={pendingMembers}
+          pageSize={10}
+          emptyStateText="No pending user invites"
+        />
+      </div>
+
+      {/* Create User Modal */}
+      <CreateUserModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onCreate={handleCreateUser}
+      />
     </AppLayout>
   );
 }

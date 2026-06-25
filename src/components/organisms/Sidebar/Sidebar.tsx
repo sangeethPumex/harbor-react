@@ -8,6 +8,7 @@ import {
   FolderKanban,
   History as HistoryIcon,
   Users,
+  Users2,
   Settings as SettingsIcon,
   Bell,
   PanelRightOpen,
@@ -18,6 +19,7 @@ import {
 const MENU_ITEMS = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/projects", label: "Projects", icon: FolderKanban },
+  { href: "/team", label: "Team", icon: Users2 },
   { href: "/history", label: "History", icon: HistoryIcon },
   { href: "/users", label: "Users", icon: Users },
   { href: "/settings", label: "Settings", icon: SettingsIcon },
