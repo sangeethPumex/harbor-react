@@ -2,9 +2,18 @@
 
 import React, { useState } from "react";
 import { AppLayout } from "@/components/templates/AppLayout/AppLayout";
-import { ProjectCard, Project } from "@/components/molecules/ProjectCard/ProjectCard";
-import { ActivityFeed, ActivityItem } from "@/components/organisms/ActivityFeed/ActivityFeed";
-import { DeploymentChart, ChartData } from "@/components/organisms/DeploymentChart/DeploymentChart";
+import {
+  ProjectCard,
+  Project,
+} from "@/components/molecules/ProjectCard/ProjectCard";
+import {
+  ActivityFeed,
+  ActivityItem,
+} from "@/components/organisms/ActivityFeed/ActivityFeed";
+import {
+  DeploymentChart,
+  ChartData,
+} from "@/components/organisms/DeploymentChart/DeploymentChart";
 
 // Mock Projects data matching screenshot
 const INITIAL_PROJECTS: Project[] = [
@@ -67,6 +76,11 @@ const ACTIVITIES: ActivityItem[] = [
   { id: "5", project: "notification-system", status: "error", user: "Ethan" },
   { id: "6", project: "report-generator", status: "deploying", user: "Sophia" },
   { id: "7", project: "customer-support", status: "idle", user: "Aiden" },
+  { id: "8", project: "analytics-dashboard", status: "deployed", user: "Emma" },
+  { id: "9", project: "email-service", status: "active", user: "Lucas" },
+  { id: "10", project: "search-indexer", status: "error", user: "Olivia" },
+  { id: "11", project: "billing-gateway", status: "deploying", user: "Jackson" },
+  { id: "12", project: "recommendation-engine", status: "idle", user: "Mia" },
 ];
 
 // Mock Chart Data matching screenshot
@@ -92,14 +106,17 @@ export default function DashboardPage() {
       const filtered = INITIAL_PROJECTS.filter(
         (p) =>
           p.name.toLowerCase().includes(query.toLowerCase()) ||
-          p.description.toLowerCase().includes(query.toLowerCase())
+          p.description.toLowerCase().includes(query.toLowerCase()),
       );
       setProjects(filtered);
     }
   };
 
   return (
-    <AppLayout onSearchChange={handleSearch} searchPlaceholder="Search projects...">
+    <AppLayout
+      onSearchChange={handleSearch}
+      searchPlaceholder="Search projects..."
+    >
       {/* Page Heading */}
       <div className="mb-5 flex justify-between items-center select-none">
         <h1 className="text-[22px] font-medium tracking-tight text-[#1a1a1a]">
@@ -142,7 +159,10 @@ export default function DashboardPage() {
           </span>
           {/* Progress Bar */}
           <div className="h-1 w-full bg-[#fdfcf9] rounded-full overflow-hidden mt-3 relative">
-            <div className="h-full bg-[#e65100] animate-pulse" style={{ width: "50%" }} />
+            <div
+              className="h-full bg-[#e65100] animate-pulse"
+              style={{ width: "50%" }}
+            />
           </div>
         </div>
 
@@ -217,7 +237,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Right Side: Recent Activity Timeline */}
-        <div className="flex flex-col">
+        <div className="flex flex-col lg:h-0 lg:min-h-full">
           <h2 className="text-sm font-semibold text-[#1a1a1a] mb-3 select-none">
             Recent Activity
           </h2>

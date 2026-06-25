@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { X, ChevronRight, ChevronLeft, Check, HelpCircle, Server, Database, Folder, Shield, Cloud } from "lucide-react";
+import { X, ChevronRight, ChevronLeft, Check} from "lucide-react";
 import { Button } from "@/components/atoms/Button/Button";
 import { InputField } from "@/components/atoms/InputField/InputField";
 import { motion, AnimatePresence } from "framer-motion";
@@ -67,8 +67,8 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
-    return () => setMounted(false);
+    const handle = requestAnimationFrame(() => setMounted(true));
+    return () => cancelAnimationFrame(handle);
   }, []);
 
   if (!isOpen) return null;
@@ -187,7 +187,7 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
                     : "bg-white border border-black/10 text-[#8a7f75]"
                 }`}
               >
-                "3"
+                3
               </div>
               <div className="flex flex-col">
                 <span className={`text-xs font-semibold ${step === 3 ? "text-[#1a1a1a]" : "text-[#8a7f75]"}`}>

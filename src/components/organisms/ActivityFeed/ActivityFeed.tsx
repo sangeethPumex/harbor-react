@@ -44,7 +44,7 @@ export const ActivityFeed: React.FC<ActivityFeedProps> = ({ activities }) => {
   };
 
   return (
-    <div className="flex flex-col gap-3 max-h-[500px] overflow-y-auto pr-1">
+    <div className="flex flex-col gap-3 flex-1 min-h-0 overflow-y-auto pr-1">
       {activities.map((act) => {
         const style = statusColors[act.status];
         return (

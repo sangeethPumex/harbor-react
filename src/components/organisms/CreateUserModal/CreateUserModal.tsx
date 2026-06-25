@@ -60,8 +60,8 @@ export const CreateUserModal: React.FC<CreateUserModalProps> = ({
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
-    return () => setMounted(false);
+    const handle = requestAnimationFrame(() => setMounted(true));
+    return () => cancelAnimationFrame(handle);
   }, []);
 
   if (!isOpen || !mounted) return null;
