@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { UserPlus, Mail, Trash2 } from "lucide-react";
 import { AppLayout } from "@/components/templates/AppLayout/AppLayout";
 import { Button } from "@/components/atoms/Button/Button";
@@ -8,7 +8,10 @@ import { InputField } from "@/components/atoms/InputField/InputField";
 import { Badge } from "@/components/atoms/Badge/Badge";
 import { DataTable } from "@/components/organisms/DataTable/DataTable";
 import { CreateUserModal } from "@/components/organisms/CreateUserModal/CreateUserModal";
+import { ViewUserModal } from "@/components/organisms/ViewUserModal/ViewUserModal";
 import { useToast } from "@/components/atoms/Toast/Toast";
+import { userService } from "@/services/user_service";
+import { authService } from "@/services/auth_service";
 
 const GithubIcon: React.FC<{ size?: number; className?: string }> = ({
   size = 14,
@@ -43,72 +46,75 @@ interface Member {
   role_id?: string;
   github_username?: string;
   requires_github_access?: boolean;
+  github_verified?: boolean;
+  is_active?: boolean;
+  created_at?: string;
+  updated_at?: string;
+  teams?: { id: string; teamName: string }[];
 }
 
-const INITIAL_MEMBERS: Member[] = [
-  {
-    id: "1",
-    name: "Admin",
-    initials: "A",
-    email: "admin@harbor.com",
-    role: "Admin",
-    projects: "All (6)",
-    lastActive: "Now",
-    status: "Active",
-    bgColor: "bg-[#d08873]",
-  },
-  {
-    id: "2",
-    name: "Ava S.",
-    initials: "AS",
-    email: "ava@ocean.com",
-    role: "Engineer",
-    projects: "ocean-api, ocean-frontend",
-    lastActive: "1 hour ago",
-    status: "Active",
-    bgColor: "bg-[#8e7a6f]",
-  },
-  {
-    id: "3",
-    name: "Emma R.",
-    initials: "ER",
-    email: "emma@sonic.com",
-    role: "Engineer",
-    projects: "Sonic API, Sonic Frontend",
-    lastActive: "moments ago",
-    status: "Active",
-    bgColor: "bg-[#a89587]",
-  },
-  {
-    id: "4",
-    name: "Noah P.",
-    initials: "NP",
-    email: "noah@sonic.com",
-    role: "Engineer",
-    projects: "Sonic API, Sonic Frontend",
-    lastActive: "moments ago",
-    status: "Active",
-    bgColor: "bg-[#beab9d]",
-  },
-  {
-    id: "5",
-    name: "Sophia L.",
-    initials: "SL",
-    email: "sophia@sonic.com",
-    role: "DevOps",
-    projects: "Sonic API, Sonic Frontend",
-    lastActive: "moments ago",
-    status: "Active",
-    bgColor: "bg-[#cfbeab]",
-  },
-];
+const INITIAL_MEMBERS: Member[] = [];
 
 export default function UsersPage() {
   const [members, setMembers] = useState<Member[]>(INITIAL_MEMBERS);
   const [inviteEmail, setInviteEmail] = useState("");
   const [isInviteOpen, setIsInviteOpen] = useState(true);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<Member | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
+
+  const fetchUsers = async () => {
+    setIsLoading(true);
+    try {
+      const data = await userService.list();
+      
+      const mappedMembers: Member[] = data.map((user: any, index: number) => {
+        const colors = ["bg-[#d08873]", "bg-[#8e7a6f]", "bg-[#a89587]", "bg-[#beab9d]", "bg-[#cfbeab]"];
+        const bgColor = colors[index % colors.length];
+        const initials = user.name ? user.name.substring(0, 2).toUpperCase() : "U";
+        
+        let roleName = "Engineer";
+        if (user.role && typeof user.role === 'string') {
+          roleName = user.role;
+        } else if (user.role && user.role.name) {
+          roleName = user.role.name;
+        } else if (user.role_name) {
+          roleName = user.role_name;
+        }
+        
+        return {
+          id: user.id,
+          name: user.name,
+          initials: initials,
+          email: user.email,
+          role: roleName as any, 
+          projects: user.projects || [],
+          lastActive: "Now",
+          status: user.is_active ? "Active" : "Pending",
+          bgColor: bgColor,
+          role_id: user.role_id,
+          github_username: user.github_username,
+          requires_github_access: user.requires_github_access,
+          github_verified: user.github_verified,
+          is_active: user.is_active,
+          created_at: user.created_at,
+          updated_at: user.updated_at,
+          teams: user.teams || []
+        };
+      });
+      setMembers(mappedMembers);
+    } catch (err: any) {
+      toast("Failed to load users");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchUsers();
+  }, []);
 
   const handleSendInvite = (e: React.FormEvent) => {
     e.preventDefault();
@@ -133,7 +139,7 @@ export default function UsersPage() {
     toast("Pending invite sent successfully!");
   };
 
-  const handleCreateUser = (newUser: {
+  const handleCreateUser = async (newUser: {
     name: string;
     email: string;
     role_id: string;
@@ -141,22 +147,21 @@ export default function UsersPage() {
     github_username?: string;
     requires_github_access: boolean;
   }) => {
-    const newMember: Member = {
-      id: Date.now().toString(),
-      name: newUser.name,
-      initials: newUser.name.substring(0, 2).toUpperCase(),
-      email: newUser.email,
-      role: newUser.role_name as Member["role"],
-      projects: "None",
-      lastActive: "Never",
-      status: "Pending",
-      bgColor: "bg-[#dfd0be]",
-      role_id: newUser.role_id,
-      github_username: newUser.github_username,
-      requires_github_access: newUser.requires_github_access,
-    };
+    try {
+      await authService.register({
+        name: newUser.name,
+        email: newUser.email,
+        role_id: newUser.role_id,
+        github_username: newUser.github_username || "",
+        requires_github_access: newUser.requires_github_access
+      });
 
-    setMembers([...members, newMember]);
+      toast("User created successfully!");
+      fetchUsers();
+    } catch (err: any) {
+      const errMsg = err.response?.data?.error || err.message || "Failed to create user";
+      toast(errMsg);
+    }
   };
 
   const handleDeleteMember = (id: string) => {
@@ -209,58 +214,36 @@ export default function UsersPage() {
       header: "Role",
       accessor: "role" as keyof Member,
       renderCell: (row: Member) => {
-        if (row.role === "Admin") {
-          return (
-            <span className="bg-[#faf1ee] text-[#d08873] text-[11px] font-semibold px-2 py-0.5 rounded-sm">
-              Admin
-            </span>
-          );
-        }
-
+        const roleColors: Record<string, string> = {
+          Admin: "bg-[#faf1ee] text-[#d08873]",
+          Engineer: "bg-[#edf4fc] text-[#1976d2]",
+          DevOps: "bg-[#f4edf6] text-[#7b1fa2]",
+          Viewer: "bg-[#f5f5f5] text-[#616161]",
+        };
+        const colorClass = roleColors[row.role] || "bg-[#f5f5f5] text-[#616161]";
         return (
-          <div className="relative inline-block">
-            <select
-              value={row.role}
-              onChange={(e) =>
-                handleRoleChange(row.id, e.target.value as Member["role"])
-              }
-              className="appearance-none bg-white border border-black/5 text-sm text-[#2b2622] py-1 pl-2.5 pr-7 rounded-md focus:outline-none focus:border-[#d08873]/50 transition-colors duration-200 cursor-pointer"
-            >
-              <option value="Engineer">Engineer</option>
-              <option value="DevOps">DevOps</option>
-              <option value="Viewer">Viewer</option>
-            </select>
-            <div className="absolute inset-y-0 right-0 pr-2 flex items-center pointer-events-none text-[#8a7f75]">
-              <svg
-                className="h-3 w-3"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2.5"
-                  d="M19 9l-7 7-7-7"
-                />
-              </svg>
-            </div>
-          </div>
+          <span className={`${colorClass} text-[11px] font-semibold px-2 py-0.5 rounded-sm`}>
+            {row.role}
+          </span>
         );
       },
     },
     {
-      header: "Projects",
-      accessor: "projects" as keyof Member,
+      header: "Created At",
+      accessor: "created_at" as keyof Member,
       renderCell: (row: Member) => (
-        <span className="text-sm text-[#6b5e52]">{row.projects}</span>
+        <span className="text-sm text-[#6b5e52]">
+          {row.created_at ? new Date(row.created_at).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" }) : "N/A"}
+        </span>
       ),
     },
     {
-      header: "Last Active",
-      accessor: "lastActive" as keyof Member,
+      header: "Updated At",
+      accessor: "updated_at" as keyof Member,
       renderCell: (row: Member) => (
-        <span className="text-sm text-[#8a7f75]">{row.lastActive}</span>
+        <span className="text-sm text-[#8a7f75]">
+          {row.updated_at ? new Date(row.updated_at).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" }) : "N/A"}
+        </span>
       ),
     },
     {
@@ -286,6 +269,24 @@ export default function UsersPage() {
             variant="secondary"
             className="px-2.5 py-1 text-xs border border-black/5 rounded-md hover:bg-[#faf9f8] cursor-pointer"
             width="w-auto"
+            onClick={async () => {
+              try {
+                const fullUser = await userService.getByID(row.id);
+                setSelectedUser({ ...row, projects: fullUser.projects, teams: fullUser.teams });
+                setIsViewModalOpen(true);
+              } catch (err: any) {
+                const errMsg = err.response?.data?.error || err.message || "Failed to load user details";
+                toast(errMsg);
+              }
+            }}
+          >
+            View
+          </Button>
+          <Button
+            size="sm"
+            variant="secondary"
+            className="px-2.5 py-1 text-xs border border-black/5 rounded-md hover:bg-[#faf9f8] cursor-pointer"
+            width="w-auto"
           >
             Edit
           </Button>
@@ -294,7 +295,7 @@ export default function UsersPage() {
               size="sm"
               variant="secondary"
               onClick={() => handleDeleteMember(row.id)}
-              className="px-2.5 py-1 text-xs text-[#c62828] hover:bg-[#ffebee] border border-[#c62828]/20 hover:border-[#c62828]/40 rounded-md cursor-pointer"
+              className="px-2.5 py-1 text-xs text-[#c62828] hover:bg-[#ffebee] border border-[#c62828] hover:border-[#c62828] rounded-md cursor-pointer"
               width="w-auto"
             >
               Delete
@@ -387,7 +388,7 @@ export default function UsersPage() {
           size="sm"
           variant="secondary"
           onClick={() => handleDeleteMember(row.id)}
-          className="px-2.5 py-1 text-xs text-[#c62828] hover:bg-[#ffebee] border border-[#c62828]/20 hover:border-[#c62828]/40 rounded-md cursor-pointer"
+          className="px-2.5 py-1 text-xs text-[#c62828] hover:bg-[#ffebee] border border-[#c62828] hover:border-[#c62828] rounded-md cursor-pointer"
           width="w-auto"
         >
           Cancel Invite
@@ -426,7 +427,33 @@ export default function UsersPage() {
         <h2 className="text-sm font-semibold text-[#1a1a1a] mb-4 select-none">
           Active Members
         </h2>
-        <DataTable columns={activeColumns} data={activeMembers} pageSize={10} />
+        {isLoading ? (
+          <div className="flex flex-col gap-2 animate-pulse">
+            {/* Skeleton header */}
+            <div className="flex gap-4 pb-2 border-b border-black/5">
+              {[2, 1.5, 1, 1, 1, 0.8].map((w, i) => (
+                <div key={i} className="h-3 bg-[#ede7e0] rounded" style={{ flex: w }} />
+              ))}
+            </div>
+            {/* Skeleton rows */}
+            {[1, 2, 3, 4, 5].map((i) => (
+              <div key={i} className="flex gap-4 py-2.5 border-b border-black/5 items-center">
+                <div className="flex items-center gap-2.5" style={{ flex: 2 }}>
+                  <div className="h-8 w-8 rounded-full bg-[#ede7e0] shrink-0" />
+                  <div className="flex flex-col gap-1.5 flex-1">
+                    <div className="h-2.5 bg-[#ede7e0] rounded w-3/4" />
+                    <div className="h-2 bg-[#ede7e0] rounded w-1/2" />
+                  </div>
+                </div>
+                {[1.5, 1, 1, 1, 0.8].map((w, j) => (
+                  <div key={j} className="h-2.5 bg-[#ede7e0] rounded" style={{ flex: w }} />
+                ))}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <DataTable columns={activeColumns} data={activeMembers} pageSize={10} />
+        )}
       </div>
 
       {/* Pending Users Table Container */}
@@ -434,12 +461,33 @@ export default function UsersPage() {
         <h2 className="text-sm font-semibold text-[#1a1a1a] mb-4 select-none">
           Pending Users
         </h2>
-        <DataTable
-          columns={pendingColumns}
-          data={pendingMembers}
-          pageSize={10}
-          emptyStateText="No pending user invites"
-        />
+        {isLoading ? (
+          <div className="flex flex-col gap-2 animate-pulse">
+            <div className="flex gap-4 pb-2 border-b border-black/5">
+              {[2, 1.5, 1, 1, 1, 0.8].map((w, i) => (
+                <div key={i} className="h-3 bg-[#ede7e0] rounded" style={{ flex: w }} />
+              ))}
+            </div>
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="flex gap-4 py-2.5 border-b border-black/5 items-center">
+                <div className="flex items-center gap-2.5" style={{ flex: 2 }}>
+                  <div className="h-8 w-8 rounded-full bg-[#ede7e0] shrink-0" />
+                  <div className="h-2.5 bg-[#ede7e0] rounded w-1/2 flex-1" />
+                </div>
+                {[1.5, 1, 1, 1, 0.8].map((w, j) => (
+                  <div key={j} className="h-2.5 bg-[#ede7e0] rounded" style={{ flex: w }} />
+                ))}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <DataTable
+            columns={pendingColumns}
+            data={pendingMembers}
+            pageSize={10}
+            emptyStateText="No pending user invites"
+          />
+        )}
       </div>
 
       {/* Create User Modal */}
@@ -447,6 +495,13 @@ export default function UsersPage() {
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
         onCreate={handleCreateUser}
+      />
+
+      {/* View User Modal */}
+      <ViewUserModal
+        isOpen={isViewModalOpen}
+        onClose={() => setIsViewModalOpen(false)}
+        user={selectedUser}
       />
     </AppLayout>
   );

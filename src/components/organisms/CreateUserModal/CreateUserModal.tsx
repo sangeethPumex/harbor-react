@@ -7,6 +7,8 @@ import { Button } from "@/components/atoms/Button/Button";
 import { InputField } from "@/components/atoms/InputField/InputField";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/components/atoms/Toast/Toast";
+import { authService } from "@/services/auth_service";
+import { userService } from "@/services/user_service";
 
 const GithubIcon: React.FC<{ size?: number; className?: string }> = ({ size = 14, className = "" }) => (
   <svg
@@ -35,12 +37,7 @@ interface CreateUserModalProps {
   }) => void;
 }
 
-const ROLES = [
-  { id: "659736a9-4e8c-4b7d-a421-77a5f88d8200", name: "Admin" },
-  { id: "759736a9-4e8c-4b7d-a421-77a5f88d8201", name: "Engineer" },
-  { id: "859736a9-4e8c-4b7d-a421-77a5f88d8202", name: "DevOps" },
-  { id: "959736a9-4e8c-4b7d-a421-77a5f88d8203", name: "Viewer" },
-];
+
 
 export const CreateUserModal: React.FC<CreateUserModalProps> = ({
   isOpen,
@@ -53,7 +50,8 @@ export const CreateUserModal: React.FC<CreateUserModalProps> = ({
   // Form states
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [roleId, setRoleId] = useState(ROLES[0].id);
+  const [roles, setRoles] = useState<{ id: string; name: string }[]>([]);
+  const [roleId, setRoleId] = useState("");
   const [requiresGithubAccess, setRequiresGithubAccess] = useState(false);
   const [githubUsername, setGithubUsername] = useState("");
 
@@ -63,6 +61,22 @@ export const CreateUserModal: React.FC<CreateUserModalProps> = ({
     const handle = requestAnimationFrame(() => setMounted(true));
     return () => cancelAnimationFrame(handle);
   }, []);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const fetchRoles = async () => {
+      try {
+        const data = await userService.listRoles();
+        setRoles(data);
+        if (data.length > 0) {
+          setRoleId(data[0].id);
+        }
+      } catch (err) {
+        console.error("Failed to fetch roles", err);
+      }
+    };
+    fetchRoles();
+  }, [isOpen]);
 
   if (!isOpen || !mounted) return null;
 
@@ -85,7 +99,7 @@ export const CreateUserModal: React.FC<CreateUserModalProps> = ({
   };
 
   const handleSubmit = () => {
-    const selectedRole = ROLES.find((r) => r.id === roleId);
+    const selectedRole = roles.find((r) => r.id === roleId);
     
     onCreate({
       name,
@@ -101,14 +115,14 @@ export const CreateUserModal: React.FC<CreateUserModalProps> = ({
     // Reset form
     setName("");
     setEmail("");
-    setRoleId(ROLES[0].id);
+    setRoleId(roles.length > 0 ? roles[0].id : "");
     setRequiresGithubAccess(false);
     setGithubUsername("");
     setStep(1);
     onClose();
   };
 
-  const selectedRoleName = ROLES.find((r) => r.id === roleId)?.name || "";
+  const selectedRoleName = roles.find((r) => r.id === roleId)?.name || "";
 
   return createPortal(
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-2xs p-4 select-none animate-fade-in">
@@ -157,7 +171,7 @@ export const CreateUserModal: React.FC<CreateUserModalProps> = ({
                     : "bg-white border border-black/10 text-[#8a7f75]"
                 }`}
               >
-                "2"
+                2
               </div>
               <div className="flex flex-col">
                 <span className={`text-xs font-semibold ${step === 2 ? "text-[#1a1a1a]" : "text-[#8a7f75]"}`}>
@@ -236,7 +250,7 @@ export const CreateUserModal: React.FC<CreateUserModalProps> = ({
                             onChange={(e) => setRoleId(e.target.value)}
                             className="w-full appearance-none bg-[#fdfcf9] border border-black/5 text-sm text-[#2b2622] py-2 pl-3 pr-8 rounded-md focus:outline-none focus:border-[#d08873]/50 transition-colors duration-200 cursor-pointer h-10"
                           >
-                            {ROLES.map((role) => (
+                             {roles.map((role) => (
                               <option key={role.id} value={role.id}>
                                 {role.name}
                               </option>

@@ -7,46 +7,83 @@ import { Button } from "@/components/atoms/Button/Button";
 import { InputField } from "@/components/atoms/InputField/InputField";
 import { OtpInput } from "@/components/atoms/OtpInput/OtpInput";
 import { Tabs } from "@/components/atoms/Tabs/Tabs";
+import { toast } from "sonner";
+import { z } from "zod";
+import { authService } from "@/services/auth_service";
+import { useAppDispatch } from "@/store/hooks";
+import { setToken } from "@/store/slices/authSlice";
 
 type LoginMode = "pin" | "password";
 
 export default function LoginPage() {
   const router = useRouter();
+  const dispatch = useAppDispatch();
   const [loginMode, setLoginMode] = useState<LoginMode>("pin");
   const [email, setEmail] = useState("sangeeth@pumexinfotech.com");
   const [pin, setPin] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
 
-  const handleLoginSubmit = (e: React.FormEvent) => {
+  const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
 
-    if (!email) {
-      setError("Please enter your email");
+    const emailSchema = z.string().email("Please enter a valid email address");
+    const emailResult = emailSchema.safeParse(email);
+    if (!emailResult.success) {
+      toast.error(emailResult.error.issues[0]?.message || "Invalid email");
       return;
     }
 
-    if (loginMode === "pin" && pin.length !== 6) {
-      setError("Please enter your 6-digit PIN");
-      return;
-    }
-
-    if (loginMode === "password" && !password) {
-      setError("Please enter your password");
-      return;
+    if (loginMode === "pin") {
+      const pinSchema = z.string().length(6, "Please enter your 6-digit PIN");
+      const pinResult = pinSchema.safeParse(pin);
+      if (!pinResult.success) {
+        toast.error(pinResult.error.issues[0]?.message || "Invalid PIN");
+        return;
+      }
+    } else {
+      const pwdSchema = z.string().min(1, "Please enter your password");
+      const pwdResult = pwdSchema.safeParse(password);
+      if (!pwdResult.success) {
+        toast.error(pwdResult.error.issues[0]?.message || "Invalid password");
+        return;
+      }
     }
 
     setLoading(true);
-    
-    // Simulate authorization response delay
-    setTimeout(() => {
-      setLoading(false);
-      localStorage.setItem("harbor_logged_in", "true");
+
+    try {
+      const data = await authService.login({
+        email,
+        ...(loginMode === "pin" ? { pin } : { password }),
+      });
+
+      toast.success("Login successful");
+      const token = data.access_token || data.token;
+      if (token) {
+        dispatch(setToken(token));
+      }
       router.push("/dashboard");
-    }, 1200);
+    } catch (err: unknown) {
+      let errMsg = "An unexpected error occurred";
+      if (err instanceof Error) {
+        errMsg = err.message;
+      }
+      if (
+        err &&
+        typeof err === "object" &&
+        "response" in err
+      ) {
+        const axiosError = err as { response?: { data?: { error?: string } } };
+        if (axiosError.response?.data?.error) {
+          errMsg = axiosError.response.data.error;
+        }
+      }
+      toast.error(errMsg);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -97,13 +134,6 @@ export default function LoginPage() {
             setActiveTab={(v) => setLoginMode(v as LoginMode)}
             fullWidth
           />
-
-          {/* Error Message */}
-          {error && (
-            <div className="bg-status-danger-bg text-status-danger-text text-xs font-semibold px-3 py-2 rounded-lg border border-status-danger-text/20 animate-fade-in text-center">
-              {error}
-            </div>
-          )}
 
           <form onSubmit={handleLoginSubmit} className="space-y-6">
             {/* Email Address */}
