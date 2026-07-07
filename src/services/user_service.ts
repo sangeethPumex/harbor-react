@@ -13,4 +13,12 @@ export const userService = {
     const response = await api.get("/roles");
     return response.data;
   },
+  patch: async (id: string, data: Record<string, unknown>) => {
+    const response = await api.patch(`/users/${id}`, data);
+    return response.data;
+  },
+  delete: async (id: string) => {
+    const response = await api.delete(`/users/${id}`);
+    return response.data;
+  },
 };

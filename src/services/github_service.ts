@@ -13,4 +13,8 @@ export const githubService = {
     const response = await api.get("/github/branches", { params: { owner, repo } });
     return response.data;
   },
+  validateUser: async (username: string) => {
+    const response = await api.get("/github/validate-user", { params: { username } });
+    return response.data;
+  },
 };

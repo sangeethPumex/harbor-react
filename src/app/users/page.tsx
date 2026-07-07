@@ -9,6 +9,7 @@ import { Badge } from "@/components/atoms/Badge/Badge";
 import { DataTable } from "@/components/organisms/DataTable/DataTable";
 import { CreateUserModal } from "@/components/organisms/CreateUserModal/CreateUserModal";
 import { ViewUserModal } from "@/components/organisms/ViewUserModal/ViewUserModal";
+import { EditUserModal } from "@/components/organisms/EditUserModal/EditUserModal";
 import { useToast } from "@/components/atoms/Toast/Toast";
 import { userService } from "@/services/user_service";
 import { authService } from "@/services/auth_service";
@@ -61,7 +62,9 @@ export default function UsersPage() {
   const [isInviteOpen, setIsInviteOpen] = useState(true);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<Member | null>(null);
+  const [selectedEditUser, setSelectedEditUser] = useState<Member | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
@@ -157,16 +160,22 @@ export default function UsersPage() {
       });
 
       toast("User created successfully!");
-      fetchUsers();
+      await fetchUsers();
     } catch (err: any) {
       const errMsg = err.response?.data?.error || err.message || "Failed to create user";
       toast(errMsg);
     }
   };
 
-  const handleDeleteMember = (id: string) => {
-    setMembers(members.filter((m) => m.id !== id));
-    toast("Member removed successfully.");
+  const handleDeleteMember = async (id: string) => {
+    try {
+      await userService.delete(id);
+      toast("Member removed successfully.");
+      await fetchUsers();
+    } catch (err: any) {
+      const errMsg = err.response?.data?.error || err.message || "Failed to remove member";
+      toast(errMsg);
+    }
   };
 
   const handleRoleChange = (id: string, newRole: Member["role"]) => {
@@ -287,6 +296,10 @@ export default function UsersPage() {
             variant="secondary"
             className="px-2.5 py-1 text-xs border border-black/5 rounded-md hover:bg-[#faf9f8] cursor-pointer"
             width="w-auto"
+            onClick={() => {
+              setSelectedEditUser(row);
+              setIsEditModalOpen(true);
+            }}
           >
             Edit
           </Button>
@@ -502,6 +515,14 @@ export default function UsersPage() {
         isOpen={isViewModalOpen}
         onClose={() => setIsViewModalOpen(false)}
         user={selectedUser}
+      />
+
+      {/* Edit User Modal */}
+      <EditUserModal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        user={selectedEditUser}
+        onSaved={fetchUsers}
       />
     </AppLayout>
   );

@@ -2,13 +2,14 @@
 
 import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { X, ChevronRight, ChevronLeft, Check, User, Mail, Shield } from "lucide-react";
+import { X, ChevronRight, ChevronLeft, Check, User, Mail, Shield, Loader2 } from "lucide-react";
 import { Button } from "@/components/atoms/Button/Button";
 import { InputField } from "@/components/atoms/InputField/InputField";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/components/atoms/Toast/Toast";
 import { authService } from "@/services/auth_service";
 import { userService } from "@/services/user_service";
+import { githubService } from "@/services/github_service";
 
 const GithubIcon: React.FC<{ size?: number; className?: string }> = ({ size = 14, className = "" }) => (
   <svg
@@ -54,6 +55,8 @@ export const CreateUserModal: React.FC<CreateUserModalProps> = ({
   const [roleId, setRoleId] = useState("");
   const [requiresGithubAccess, setRequiresGithubAccess] = useState(false);
   const [githubUsername, setGithubUsername] = useState("");
+  const [githubVerified, setGithubVerified] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
 
   const [mounted, setMounted] = useState(false);
 
@@ -90,7 +93,30 @@ export const CreateUserModal: React.FC<CreateUserModalProps> = ({
         toast("Please enter your GitHub username.", "error");
         return;
       }
+      if (requiresGithubAccess && !githubVerified) {
+        toast("Please verify the GitHub ID before proceeding.", "error");
+        return;
+      }
       setStep(2);
+    }
+  };
+
+  const handleVerifyGithub = async () => {
+    if (!githubUsername.trim()) {
+      toast("Please enter a GitHub username.", "error");
+      return;
+    }
+    setIsVerifying(true);
+    try {
+      await githubService.validateUser(githubUsername.trim());
+      setGithubVerified(true);
+      toast("GitHub ID verified!");
+    } catch (err: any) {
+      setGithubVerified(false);
+      const msg = err.response?.data?.error || err.message || "GitHub verification failed";
+      toast(msg, "error");
+    } finally {
+      setIsVerifying(false);
     }
   };
 
@@ -118,6 +144,7 @@ export const CreateUserModal: React.FC<CreateUserModalProps> = ({
     setRoleId(roles.length > 0 ? roles[0].id : "");
     setRequiresGithubAccess(false);
     setGithubUsername("");
+    setGithubVerified(false);
     setStep(1);
     onClose();
   };
@@ -299,13 +326,46 @@ export const CreateUserModal: React.FC<CreateUserModalProps> = ({
                           <label className="text-xs font-semibold text-[#8a7f75] mt-1">
                             GitHub Username <span className="text-[#c62828] font-bold">*</span>
                           </label>
-                          <InputField
-                            placeholder="eg. sangeethPumex"
-                            value={githubUsername}
-                            onChange={(e) => setGithubUsername(e.target.value)}
-                            iconLeft={<GithubIcon size={14} className="text-[#8a7f75]" />}
-                            className="bg-[#fdfcf9] border-black/5 text-sm h-10"
-                          />
+                          <div className="flex gap-2 items-center">
+                            <div className="flex-1">
+                              <InputField
+                                placeholder="eg. sangeethPumex"
+                                value={githubUsername}
+                                onChange={(e) => {
+                                  setGithubUsername(e.target.value);
+                                  setGithubVerified(false);
+                                }}
+                                iconLeft={<GithubIcon size={14} className="text-[#8a7f75]" />}
+                                className="bg-[#fdfcf9] border-black/5 text-sm h-10"
+                              />
+                            </div>
+                            {githubVerified ? (
+                              <div className="flex items-center gap-1.5 text-[#2e7d32] text-xs font-semibold shrink-0 pr-1">
+                                <span className="h-7 w-7 rounded-full bg-[#e8f5e9] flex items-center justify-center">
+                                  <Check size={13} />
+                                </span>
+                                Verified
+                              </div>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={handleVerifyGithub}
+                                disabled={isVerifying || !githubUsername.trim()}
+                                className="shrink-0 h-10 px-3 text-xs font-semibold rounded-md border border-black/10 bg-[#fdfcf9] text-[#2b2622] hover:bg-[#f5f0eb] disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
+                              >
+                                {isVerifying ? (
+                                  <><Loader2 size={12} className="animate-spin" />Verifying…</>
+                                ) : (
+                                  <><GithubIcon size={12} />Verify GitHub ID</>
+                                )}
+                              </button>
+                            )}
+                          </div>
+                          {githubUsername && !githubVerified && (
+                            <p className="text-[11px] text-[#d08873] font-medium mt-0.5">
+                              Verify the GitHub ID to continue.
+                            </p>
+                          )}
                         </motion.div>
                       )}
                     </AnimatePresence>
@@ -390,7 +450,7 @@ export const CreateUserModal: React.FC<CreateUserModalProps> = ({
               <Button
                 variant="primary"
                 onClick={handleNext}
-                disabled={!name || !email || (requiresGithubAccess && !githubUsername)}
+                disabled={!name || !email || (requiresGithubAccess && (!githubUsername || !githubVerified))}
                 icon={<ChevronRight size={14} />}
                 iconPosition="right"
                 width="w-auto"
