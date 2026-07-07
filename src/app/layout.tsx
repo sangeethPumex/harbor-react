@@ -12,6 +12,9 @@ const gabarito = Gabarito({
 export const metadata: Metadata = {
   title: "Harbor Portal",
   description: "Secure workspace and environment manager",
+  icons: {
+    icon: "/harbor-logo.svg",
+  },
 };
 
 import { StoreProvider } from "@/store/StoreProvider";
