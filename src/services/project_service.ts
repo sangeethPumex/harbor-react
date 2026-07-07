@@ -8,6 +8,7 @@ interface CreateResourcePayload {
 
 interface CreateEnvPayload {
   environment_name: string;
+  branch_name: string;
   resources: CreateResourcePayload[];
 }
 
@@ -30,8 +31,16 @@ export const projectService = {
     const response = await api.post("/composition/project-list-page", { page, status });
     return response.data;
   },
+  getProjectDetails: async (id: string, page = 1, perPage = 10) => {
+    const response = await api.post(`/composition/project-details/${id}`, { page, perPage });
+    return response.data;
+  },
   create: async (payload: CreateProjectPayload) => {
     const response = await api.post("/projects/create-project", payload);
+    return response.data;
+  },
+  addEnvironment: async (id: string, payload: CreateEnvPayload) => {
+    const response = await api.post(`/projects/${id}/add-environment`, payload);
     return response.data;
   },
 };

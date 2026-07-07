@@ -44,7 +44,7 @@ export const Sidebar: React.FC = () => {
       {/* HEADER */}
       <div className="flex items-center justify-between px-4 py-4 border-b border-black/5 h-16 shrink-0">
         <div className="flex items-center gap-2.5 select-none">
-          <img src="/harbor-mini.svg" alt="Harbor Icon" className="h-7 w-auto animate-fade-in" />
+          <img src="/harbor-logo.svg" alt="Harbor Logo" className="h-7 w-auto animate-fade-in" />
           {!collapsed && (
             <span className="font-extrabold text-[15px] tracking-tight text-[#1a1a1a] animate-fade-in">
               Harbor

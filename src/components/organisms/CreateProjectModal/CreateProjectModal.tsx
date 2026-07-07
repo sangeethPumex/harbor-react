@@ -305,6 +305,7 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ isOpen, 
         runtime,
         environments: [{
           environment_name: envName,
+          branch_name: branch,
           resources: resources.filter((r) => r.aws_service && r.aws_resource),
         }],
       };
