@@ -36,7 +36,7 @@ const AWS_REGIONS = [
   { value: "ap-south-1", label: "ap-south-1 (Mumbai)" },
   { value: "eu-west-1", label: "eu-west-1 (Ireland)" },
 ];
-const AVAILABLE_SERVICES = ["EC2", "S3"];
+const AVAILABLE_SERVICES = ["EC2", "S3", "ELB", "ECS", "CloudWatch", "RDS"];
 const PROJECT_TYPES = ["Internal Project", "Client Project", "Open Source"];
 const RUNTIMES = ["Go 1.22", "Node 20", "Python 3.12", "Java 21", "Ruby 3.3"];
 const BG_COLORS = [
@@ -168,6 +168,9 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ isOpen, 
   const [awsResourceOptions, setAwsResourceOptions] = useState<Record<number, string[]>>({});
   const [loadingResources, setLoadingResources] = useState<Record<number, boolean>>({});
 
+  const [ecsTasks, setEcsTasks] = useState<Record<number, any[]>>({});
+  const [loadingEcsTasks, setLoadingEcsTasks] = useState<Record<number, boolean>>({});
+
   useEffect(() => {
     const handle = requestAnimationFrame(() => setMounted(true));
     return () => cancelAnimationFrame(handle);
@@ -263,8 +266,21 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ isOpen, 
     setResources((p) => p.map((r, i) => i === idx ? { ...r, aws_region: region } : r));
   };
 
-  const handleResourceChange = (idx: number, resource: string) => {
+  const handleResourceChange = async (idx: number, resource: string) => {
     setResources((p) => p.map((r, i) => i === idx ? { ...r, aws_resource: resource } : r));
+    
+    // Fetch ECS tasks if service is ECS
+    if (resources[idx]?.aws_service === "ECS" && resource) {
+      setLoadingEcsTasks((p) => ({ ...p, [idx]: true }));
+      try {
+        const data = await awsService.getECSTasks(resource);
+        setEcsTasks((p) => ({ ...p, [idx]: data.data || data }));
+      } catch {
+        toast.error("Failed to load ECS tasks");
+      } finally {
+        setLoadingEcsTasks((p) => ({ ...p, [idx]: false }));
+      }
+    }
   };
 
   const addResource = () =>
@@ -345,6 +361,10 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ isOpen, 
   const serviceColors: Record<string, string> = {
     EC2: "text-[#1565c0] bg-[#e3f2fd]",
     S3: "text-[#e65100] bg-[#fff3e0]",
+    ELB: "text-[#2e7d32] bg-[#e8f5e9]",
+    ECS: "text-[#d84315] bg-[#fbe9e7]",
+    CloudWatch: "text-[#00838f] bg-[#e0f7fa]",
+    RDS: "text-[#6a1b9a] bg-[#f3e5f5]",
   };
 
   return createPortal(
@@ -584,12 +604,42 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ isOpen, 
                               {/* Row 2: Resource identifier (only when service picked) */}
                               {res.aws_service && (
                                 <CustomDropdown
-                                  label={`${res.aws_service} Resource`}
+                                  label={res.aws_service === "ECS" ? "Cluster" : `${res.aws_service} Resource`}
                                   options={resourceOpts} value={res.aws_resource}
                                   onChange={(v) => handleResourceChange(idx, v)}
                                   placeholder={loadingResources[idx] ? "Loading resources..." : "Select Resource"}
                                   loading={loadingResources[idx]}
                                 />
+                              )}
+                              
+                              {/* Row 3: ECS Tasks details (only when ECS cluster picked) */}
+                              {res.aws_service === "ECS" && res.aws_resource && (
+                                <div className="mt-1 p-3 bg-[#fdfcf9] border border-black/5 rounded-md">
+                                  <h5 className="text-xs font-semibold text-[#1a1a1a] mb-2">Cluster Tasks</h5>
+                                  {loadingEcsTasks[idx] ? (
+                                    <div className="flex items-center gap-2 text-xs text-[#8a7f75]">
+                                      <Loader2 size={12} className="animate-spin" /> Loading tasks...
+                                    </div>
+                                  ) : (ecsTasks[idx] || []).length > 0 ? (
+                                    <div className="flex flex-col gap-2 max-h-[120px] overflow-y-auto pr-1">
+                                      {ecsTasks[idx].map((task: any, tIdx: number) => {
+                                        const tName = task.taskArn.split("/").pop();
+                                        return (
+                                          <div key={tIdx} className="flex justify-between items-center text-[11px] p-2 bg-white border border-black/5 rounded-sm">
+                                            <span className="font-medium text-[#1a1a1a] truncate w-2/3" title={task.taskArn}>{tName}</span>
+                                            <div className="flex gap-2 text-[#8a7f75]">
+                                              <span className="font-semibold text-[#2e7d32]">{task.lastStatus}</span>
+                                              <span>{task.cpu || "?"} CPU</span>
+                                              <span>{task.memory || "?"} Mem</span>
+                                            </div>
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  ) : (
+                                    <p className="text-[10px] text-[#8a7f75] italic">No active tasks in this cluster.</p>
+                                  )}
+                                </div>
                               )}
                             </div>
                           );

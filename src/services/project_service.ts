@@ -43,4 +43,8 @@ export const projectService = {
     const response = await api.post(`/projects/${id}/add-environment`, payload);
     return response.data;
   },
+  getEnvironmentDetails: async (id: string, envName: string) => {
+    const response = await api.get(`/composition/project-environment-details/${id}/${envName}`);
+    return response.data;
+  },
 };
