@@ -24,12 +24,12 @@ interface CreateProjectModalProps {
 }
 interface TeamOption { id: string; teamName: string; }
 interface UserOption { id: string; name: string; email: string; }
+interface OrgOption { id: number | string; login: string; description?: string; }
 interface RepoOption { name: string; default_branch?: string; }
 interface BranchOption { name: string; }
 interface ResourceEntry { aws_region: string; aws_service: string; aws_resource: string; }
 
 /* ─── Constants ─── */
-const GITHUB_OWNER = "sangeethPumex";
 const AWS_REGIONS = [
   { value: "us-east-1", label: "us-east-1 (N. Virginia)" },
   { value: "us-west-2", label: "us-west-2 (Oregon)" },
@@ -142,10 +142,12 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ isOpen, 
   /* API data */
   const [teams, setTeams] = useState<TeamOption[]>([]);
   const [users, setUsers] = useState<UserOption[]>([]);
+  const [orgs, setOrgs] = useState<OrgOption[]>([]);
   const [repos, setRepos] = useState<RepoOption[]>([]);
   const [branches, setBranches] = useState<BranchOption[]>([]);
   const [loadingTeams, setLoadingTeams] = useState(false);
   const [loadingUsers, setLoadingUsers] = useState(false);
+  const [loadingOrgs, setLoadingOrgs] = useState(false);
   const [loadingRepos, setLoadingRepos] = useState(false);
   const [loadingBranches, setLoadingBranches] = useState(false);
 
@@ -158,6 +160,7 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ isOpen, 
   const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([]);
 
   /* Step 2 state */
+  const [githubOrg, setGithubOrg] = useState("");
   const [githubRepo, setGithubRepo] = useState("");
   const [branch, setBranch] = useState("");
   const [runtime, setRuntime] = useState("Go 1.22");
@@ -176,7 +179,7 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ isOpen, 
     return () => cancelAnimationFrame(handle);
   }, []);
 
-  /* Fetch teams + users + repos on open */
+  /* Fetch teams + users + orgs on open */
   useEffect(() => {
     if (!isOpen) return;
 
@@ -199,8 +202,24 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ isOpen, 
       .catch(() => {})
       .finally(() => setLoadingUsers(false));
 
+    setLoadingOrgs(true);
+    githubService.getOrgs()
+      .then((data) => {
+        const list = Array.isArray(data) ? data : [];
+        setOrgs(list);
+        if (list.length > 0) setGithubOrg(list[0].login);
+      })
+      .catch(() => toast.error("Failed to load organizations"))
+      .finally(() => setLoadingOrgs(false));
+  }, [isOpen]);
+
+  /* Fetch repos when org changes */
+  useEffect(() => {
+    if (!githubOrg) return;
     setLoadingRepos(true);
-    githubService.getRepos(GITHUB_OWNER)
+    setRepos([]);
+    setGithubRepo("");
+    githubService.getRepos(githubOrg)
       .then((data) => {
         const list = Array.isArray(data) ? data : [];
         setRepos(list);
@@ -208,15 +227,15 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ isOpen, 
       })
       .catch(() => toast.error("Failed to load repositories"))
       .finally(() => setLoadingRepos(false));
-  }, [isOpen]);
+  }, [githubOrg]);
 
   /* Fetch branches when repo changes */
   useEffect(() => {
-    if (!githubRepo) return;
+    if (!githubOrg || !githubRepo) return;
     setLoadingBranches(true);
     setBranches([]);
     setBranch("");
-    githubService.getBranches(GITHUB_OWNER, githubRepo)
+    githubService.getBranches(githubOrg, githubRepo)
       .then((data) => {
         const list = Array.isArray(data) ? data : [];
         setBranches(list);
@@ -226,7 +245,7 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ isOpen, 
       })
       .catch(() => toast.error("Failed to load branches"))
       .finally(() => setLoadingBranches(false));
-  }, [githubRepo]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [githubOrg, githubRepo]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* AWS resource fetch */
   const fetchAWSResources = async (idx: number, service: string) => {
@@ -297,7 +316,7 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ isOpen, 
   const resetForm = () => {
     setStep(1); setProjectName(""); setTeamId(teams[0]?.id || "");
     setProjectType("Internal Project"); setDescription(""); setTagsInput("");
-    setSelectedMemberIds([]); setGithubRepo(""); setBranch("");
+    setSelectedMemberIds([]); setGithubOrg(orgs[0]?.login || ""); setGithubRepo(""); setBranch("");
     setRuntime("Go 1.22"); setEnvName("dev");
     setResources([{ aws_region: "us-east-1", aws_service: "", aws_resource: "" }]);
     setAwsResourceOptions({}); setLoadingResources({});
@@ -315,7 +334,7 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ isOpen, 
         project_type: projectType,
         tags: tagsInput.split(",").map((t) => t.trim()).filter(Boolean),
         members: selectedMemberIds,
-        github_org: GITHUB_OWNER,
+        github_org: githubOrg,
         github_repo: githubRepo,
         branch,
         runtime,
@@ -330,7 +349,7 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ isOpen, 
       onCreate({
         id: projectName.toLowerCase().replace(/\s+/g, "-"),
         name: projectName, description,
-        repo: `${GITHUB_OWNER}/${githubRepo}`, branch,
+        repo: `${githubOrg}/${githubRepo}`, branch,
         healthyCount: 1, unhealthyCount: 0,
         lastDeployment: "Just now", lastDeployedBy: "You", status: "healthy",
       });
@@ -351,10 +370,10 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ isOpen, 
   /* Build dropdown options */
   const teamOptions = teams.map((t) => ({ value: t.id, label: t.teamName }));
   const typeOptions = PROJECT_TYPES.map((p) => ({ value: p, label: p }));
+  const orgOptions = orgs.map((o) => ({ value: o.login, label: o.description ? `${o.login} (${o.description})` : o.login }));
   const repoOptions = repos.map((r) => ({ value: r.name, label: r.name }));
   const branchOptions = branches.map((b) => ({ value: b.name, label: b.name }));
   const runtimeOptions = RUNTIMES.map((r) => ({ value: r, label: r }));
-  const envOptions = ["dev", "uat", "production"].map((e) => ({ value: e, label: e }));
   const regionOptions = AWS_REGIONS.map((r) => ({ value: r.value, label: r.label }));
   const serviceOptions = AVAILABLE_SERVICES.map((s) => ({ value: s, label: s }));
 
@@ -534,19 +553,20 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ isOpen, 
                   <div className="lg:col-span-8 flex flex-col gap-4">
                     <h3 className="text-sm font-semibold text-[#1a1a1a] pb-1 border-b border-black/5">Source & Config</h3>
 
-                    {/* GitHub — org fixed, repo dynamic */}
+                    {/* GitHub — org and repo dynamic */}
                     <div className="grid grid-cols-2 gap-4">
-                      <div className="flex flex-col gap-1">
-                        <label className="text-xs font-semibold text-[#8a7f75]">GitHub Organization</label>
-                        <div className="h-[38px] px-3 flex items-center bg-[#f4f1ee] border border-black/5 rounded-md text-sm text-[#8a7f75] font-medium">
-                          {GITHUB_OWNER}
-                        </div>
-                      </div>
+                      <CustomDropdown
+                        label="GitHub Organization *"
+                        options={orgOptions} value={githubOrg}
+                        onChange={setGithubOrg} placeholder="Select Org"
+                        loading={loadingOrgs}
+                      />
                       <CustomDropdown
                         label="GitHub Repo *"
                         options={repoOptions} value={githubRepo}
                         onChange={setGithubRepo} placeholder="Select Repo"
                         loading={loadingRepos}
+                        disabled={!githubOrg}
                       />
                     </div>
 
@@ -565,10 +585,12 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ isOpen, 
                       />
                     </div>
 
-                    <CustomDropdown
-                      label="Environment Name *"
-                      options={envOptions} value={envName}
-                      onChange={setEnvName}
+                    <InputField
+                      label="Environment Name"
+                      required
+                      placeholder="e.g. dev, staging, prod, uat"
+                      value={envName}
+                      onChange={(e) => setEnvName(e.target.value)}
                     />
 
                     {/* AWS Deployment Target */}
@@ -719,7 +741,7 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ isOpen, 
                     <div className="flex flex-col gap-3 border-t md:border-t-0 md:border-l border-black/5 pt-4 md:pt-0 md:pl-6">
                       <h4 className="text-xs font-bold text-[#8a7f75] uppercase tracking-wider">Source & Compute</h4>
                       <div className="flex flex-col gap-2.5 text-xs text-[#6b5e52]">
-                        <div><span className="font-semibold block text-[#1a1a1a]">Repository</span><span>{GITHUB_OWNER}/{githubRepo || "—"}</span></div>
+                        <div><span className="font-semibold block text-[#1a1a1a]">Repository</span><span>{githubOrg || "—"}/{githubRepo || "—"}</span></div>
                         <div><span className="font-semibold block text-[#1a1a1a]">Branch</span><span className="text-[#1565c0] font-medium">{branch || "—"}</span></div>
                         <div><span className="font-semibold block text-[#1a1a1a]">Runtime</span><span>{runtime}</span></div>
                         <div><span className="font-semibold block text-[#1a1a1a]">Environment</span><span>{envName}</span></div>

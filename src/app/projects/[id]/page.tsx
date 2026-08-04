@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
@@ -47,7 +47,10 @@ function TableSkeleton({ rows, cols }: { rows: number; cols: number }) {
         ))}
       </div>
       {Array.from({ length: rows }).map((_, i) => (
-        <div key={i} className="flex gap-4 py-3 border-b border-black/5 items-center">
+        <div
+          key={i}
+          className="flex gap-4 py-3 border-b border-black/5 items-center"
+        >
           {Array.from({ length: cols }).map((_, j) => (
             <div key={j} className="h-3 bg-[#ede7e0] rounded flex-1" />
           ))}
@@ -60,7 +63,8 @@ function TableSkeleton({ rows, cols }: { rows: number; cols: number }) {
 function envStatusVariant(status: string): "success" | "warning" | "danger" {
   const s = status.toLowerCase();
   if (s === "active" || s === "live") return "success";
-  if (s === "deploying" || s === "running" || s === "in_progress") return "warning";
+  if (s === "deploying" || s === "running" || s === "in_progress")
+    return "warning";
   return "danger";
 }
 
@@ -74,7 +78,8 @@ function envStatusLabel(status: string): string {
 function deployStatusVariant(status: string): "success" | "warning" | "danger" {
   const s = status.toLowerCase();
   if (s === "success") return "success";
-  if (s === "in_progress" || s === "queued" || s === "waiting") return "warning";
+  if (s === "in_progress" || s === "queued" || s === "waiting")
+    return "warning";
   return "danger";
 }
 
@@ -95,24 +100,61 @@ export default function ProjectDetailPage() {
       if (!silent) setIsLoading(true);
       else setIsRefreshing(true);
       try {
-        const res: ProjectDetailsResponse = await projectService.getProjectDetails(projectId);
+        const res: ProjectDetailsResponse =
+          await projectService.getProjectDetails(projectId);
         setData(res);
-      } catch (err: any) {
-        const msg = err.response?.data?.error || err.message || "Failed to load project details";
+      } catch (err: unknown) {
+        const error = err as {
+          response?: { data?: { error?: string } };
+          message?: string;
+        };
+        const msg =
+          error.response?.data?.error ||
+          error.message ||
+          "Failed to load project details";
         toast(msg);
       } finally {
         setIsLoading(false);
         setIsRefreshing(false);
       }
     },
-    [projectId]
+    [projectId, toast],
   );
 
   useEffect(() => {
-    fetchDetails();
-  }, [fetchDetails]);
+    let ignore = false;
+    if (!projectId) return;
 
-  const projectName = data?.projectName || (typeof id === "string" ? id : "Project");
+    projectService
+      .getProjectDetails(projectId)
+      .then((res: ProjectDetailsResponse) => {
+        if (!ignore) {
+          setData(res);
+          setIsLoading(false);
+        }
+      })
+      .catch((err: unknown) => {
+        if (!ignore) {
+          const error = err as {
+            response?: { data?: { error?: string } };
+            message?: string;
+          };
+          const msg =
+            error.response?.data?.error ||
+            error.message ||
+            "Failed to load project details";
+          toast(msg);
+          setIsLoading(false);
+        }
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, [projectId, toast]);
+
+  const projectName =
+    data?.projectName || (typeof id === "string" ? id : "Project");
   const projectDescription = data?.projectDescription ?? "";
   const githubParts = (data?.githubdata ?? "").split("/");
   const githubOrg = githubParts[0] ?? "";
@@ -120,7 +162,8 @@ export default function ProjectDetailPage() {
   const envs = data?.environments ?? [];
   const deploys = data?.recentDeployments ?? [];
   const healthyCount = envs.filter(
-    (e) => e.status.toLowerCase() === "active" || e.status.toLowerCase() === "live"
+    (e) =>
+      e.status.toLowerCase() === "active" || e.status.toLowerCase() === "live",
   ).length;
 
   const envColumns: Column<EnvironmentDetailItem>[] = [
@@ -131,13 +174,17 @@ export default function ProjectDetailPage() {
       renderCell: (row) => {
         const variant = envStatusVariant(row.status);
         const dotColor =
-          variant === "success" ? "bg-[#2e7d32]"
-          : variant === "warning" ? "bg-[#e65100]"
-          : "bg-[#c62828]";
+          variant === "success"
+            ? "bg-[#2e7d32]"
+            : variant === "warning"
+              ? "bg-[#e65100]"
+              : "bg-[#c62828]";
         return (
           <div className="flex items-center gap-2">
             <span className={`h-2 w-2 rounded-full shrink-0 ${dotColor}`} />
-            <span className="font-medium text-[#1a1a1a]">{row.environmentName}</span>
+            <span className="font-medium text-[#1a1a1a]">
+              {row.environmentName}
+            </span>
           </div>
         );
       },
@@ -147,7 +194,11 @@ export default function ProjectDetailPage() {
       accessor: "status",
       className: "w-28",
       renderCell: (row) => (
-        <Badge variant={envStatusVariant(row.status)} showDot={false} className="text-xs font-medium rounded-sm px-2 py-0.5">
+        <Badge
+          variant={envStatusVariant(row.status)}
+          showDot={false}
+          className="text-xs font-medium rounded-sm px-2 py-0.5"
+        >
           {envStatusLabel(row.status)}
         </Badge>
       ),
@@ -157,15 +208,21 @@ export default function ProjectDetailPage() {
       accessor: "lastDeployment",
       renderCell: (row) => (
         <div className="flex flex-col min-w-0">
-          <span className="text-sm text-[#2b2622] font-medium">{row.lastDeployment}</span>
-          {row.deployedBy && <span className="text-xs text-[#8a7f75]">by {row.deployedBy}</span>}
+          <span className="text-sm text-[#2b2622] font-medium">
+            {row.lastDeployment}
+          </span>
+          {row.deployedBy && (
+            <span className="text-xs text-[#8a7f75]">by {row.deployedBy}</span>
+          )}
         </div>
       ),
     },
     {
       header: "Deployed By",
       accessor: "deployedBy",
-      renderCell: (row) => <span className="text-sm text-[#6b5e52]">{row.deployedBy || "—"}</span>,
+      renderCell: (row) => (
+        <span className="text-sm text-[#6b5e52]">{row.deployedBy || "—"}</span>
+      ),
     },
     {
       header: "Branch",
@@ -197,7 +254,11 @@ export default function ProjectDetailPage() {
           <Button
             size="sm"
             variant="secondary"
-            onClick={() => router.push(`/projects/${projectId}/environments/${row.environmentName}`)}
+            onClick={() =>
+              router.push(
+                `/projects/${projectId}/environments/${row.environmentName}`,
+              )
+            }
             width="w-auto"
             className="cursor-pointer"
           >
@@ -213,17 +274,23 @@ export default function ProjectDetailPage() {
       header: "#",
       accessor: "number",
       className: "w-16",
-      renderCell: (row) => <span className="text-[#8a7f75]">#{row.number}</span>,
+      renderCell: (row) => (
+        <span className="text-[#8a7f75]">#{row.number}</span>
+      ),
     },
     {
       header: "Environment",
       accessor: "environment",
       renderCell: (row) => (
-        <span className={`font-medium ${
-          row.environment.toLowerCase() === "production" ? "text-[#d08873]"
-          : row.environment.toLowerCase() === "uat" ? "text-[#e65100]"
-          : "text-[#2b2622]"
-        }`}>
+        <span
+          className={`font-medium ${
+            row.environment.toLowerCase() === "production"
+              ? "text-[#d08873]"
+              : row.environment.toLowerCase() === "uat"
+                ? "text-[#e65100]"
+                : "text-[#2b2622]"
+          }`}
+        >
           {row.environment}
         </span>
       ),
@@ -232,7 +299,11 @@ export default function ProjectDetailPage() {
       header: "Status",
       accessor: "status",
       renderCell: (row) => (
-        <Badge variant={deployStatusVariant(row.status)} showDot={false} className="capitalize text-xs font-medium rounded-sm px-2 py-0.5">
+        <Badge
+          variant={deployStatusVariant(row.status)}
+          showDot={false}
+          className="capitalize text-xs font-medium rounded-sm px-2 py-0.5"
+        >
           {row.status}
         </Badge>
       ),
@@ -240,17 +311,23 @@ export default function ProjectDetailPage() {
     {
       header: "Triggered By",
       accessor: "triggeredBy",
-      renderCell: (row) => <span className="text-sm text-[#6b5e52]">{row.triggeredBy || "—"}</span>,
+      renderCell: (row) => (
+        <span className="text-sm text-[#6b5e52]">{row.triggeredBy || "—"}</span>
+      ),
     },
     {
       header: "Duration",
       accessor: "duration",
-      renderCell: (row) => <span className="text-sm text-[#6b5e52]">{row.duration || "—"}</span>,
+      renderCell: (row) => (
+        <span className="text-sm text-[#6b5e52]">{row.duration || "—"}</span>
+      ),
     },
     {
       header: "Timestamp",
       accessor: "timestamp",
-      renderCell: (row) => <span className="text-sm text-[#6b5e52]">{row.timestamp || "—"}</span>,
+      renderCell: (row) => (
+        <span className="text-sm text-[#6b5e52]">{row.timestamp || "—"}</span>
+      ),
     },
     {
       header: "Commit",
@@ -279,8 +356,14 @@ export default function ProjectDetailPage() {
             </div>
           ) : (
             <>
-              <h1 className="text-[22px] font-medium text-[#1a1a1a]">{projectName}</h1>
-              {projectDescription && <p className="text-sm text-[#6b5e52] mt-1">{projectDescription}</p>}
+              <h1 className="text-[22px] font-medium text-[#1a1a1a]">
+                {projectName}
+              </h1>
+              {projectDescription && (
+                <p className="text-sm text-[#6b5e52] mt-1">
+                  {projectDescription}
+                </p>
+              )}
               <div className="flex items-center gap-3 mt-3">
                 {githubOrg && githubRepo && (
                   <span className="inline-flex items-center gap-1 bg-white border border-black/5 text-[#6b5e52] text-[11px] font-medium px-2 py-0.5 rounded-sm">
@@ -303,7 +386,12 @@ export default function ProjectDetailPage() {
           <Button
             size="sm"
             variant="secondary"
-            icon={<RefreshCw size={13} className={isRefreshing ? "animate-spin" : ""} />}
+            icon={
+              <RefreshCw
+                size={13}
+                className={isRefreshing ? "animate-spin" : ""}
+              />
+            }
             width="w-auto"
             className="cursor-pointer border border-black/5"
             onClick={() => fetchDetails(true)}
@@ -337,20 +425,32 @@ export default function ProjectDetailPage() {
         {isLoading ? (
           <TableSkeleton rows={4} cols={7} />
         ) : (
-          <DataTable columns={envColumns} data={envs} pageSize={10} emptyStateText="No environments configured for this project" />
+          <DataTable
+            columns={envColumns}
+            data={envs}
+            pageSize={10}
+            emptyStateText="No environments configured for this project"
+          />
         )}
       </div>
 
       {/* Recent Deployments */}
       <div className="mb-3 select-none">
-        <h2 className="text-sm font-semibold text-[#1a1a1a]">Recent Deployments</h2>
+        <h2 className="text-sm font-semibold text-[#1a1a1a]">
+          Recent Deployments
+        </h2>
       </div>
 
       <div>
         {isLoading ? (
           <TableSkeleton rows={5} cols={7} />
         ) : (
-          <DataTable columns={deployColumns} data={deploys} pageSize={10} emptyStateText="No deployments found" />
+          <DataTable
+            columns={deployColumns}
+            data={deploys}
+            pageSize={10}
+            emptyStateText="No deployments found"
+          />
         )}
       </div>
 
@@ -358,6 +458,7 @@ export default function ProjectDetailPage() {
         isOpen={isAddEnvOpen}
         onClose={() => setIsAddEnvOpen(false)}
         projectId={projectId}
+        githubOrg={githubOrg}
         githubRepo={githubRepo}
         onCreated={() => fetchDetails(false)}
       />

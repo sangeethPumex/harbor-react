@@ -15,6 +15,7 @@ interface CreateEnvironmentModalProps {
   isOpen: boolean;
   onClose: () => void;
   projectId: string;
+  githubOrg?: string;
   githubRepo: string; // Dynamic repository from parent page
   onCreated: () => void;
 }
@@ -30,7 +31,6 @@ interface DropdownOption {
   label: string;
 }
 
-const GITHUB_OWNER = "sangeethPumex";
 const AWS_REGIONS = [
   { value: "us-east-1", label: "us-east-1 (N. Virginia)" },
   { value: "us-west-2", label: "us-west-2 (Oregon)" },
@@ -38,12 +38,6 @@ const AWS_REGIONS = [
   { value: "eu-west-1", label: "eu-west-1 (Ireland)" },
 ];
 const AVAILABLE_SERVICES = ["EC2", "S3", "ELB", "ECS", "CloudWatch", "RDS"];
-const ENV_NAME_OPTIONS = [
-  { value: "dev", label: "Development (dev)" },
-  { value: "staging", label: "Staging (staging)" },
-  { value: "uat", label: "UAT (uat)" },
-  { value: "production", label: "Production (production)" },
-];
 
 /* Custom Dropdown Component */
 interface CustomDropdownProps {
@@ -144,6 +138,7 @@ export const CreateEnvironmentModal: React.FC<CreateEnvironmentModalProps> = ({
   isOpen,
   onClose,
   projectId,
+  githubOrg,
   githubRepo,
   onCreated,
 }) => {
@@ -174,10 +169,11 @@ export const CreateEnvironmentModal: React.FC<CreateEnvironmentModalProps> = ({
   /* Fetch branches when repo changes / modal opens */
   useEffect(() => {
     if (!isOpen || !githubRepo) return;
+    const owner = githubOrg || "sangeethPumex";
     setLoadingBranches(true);
     setBranches([]);
     setBranch("");
-    githubService.getBranches(GITHUB_OWNER, githubRepo)
+    githubService.getBranches(owner, githubRepo)
       .then((data) => {
         const list = Array.isArray(data) ? data : [];
         const opts = list.map((b: any) => ({ value: b.name, label: b.name }));
@@ -186,7 +182,7 @@ export const CreateEnvironmentModal: React.FC<CreateEnvironmentModalProps> = ({
       })
       .catch(() => toast.error("Failed to load branches"))
       .finally(() => setLoadingBranches(false));
-  }, [isOpen, githubRepo]);
+  }, [isOpen, githubOrg, githubRepo]);
 
   /* AWS resources fetching */
   const fetchAWSResources = async (idx: number, service: string) => {
@@ -289,11 +285,12 @@ export const CreateEnvironmentModal: React.FC<CreateEnvironmentModalProps> = ({
 
         {/* Body */}
         <div className="flex-1 overflow-y-auto px-6 py-5 flex flex-col gap-4">
-          <CustomDropdown
-            label="Environment Name *"
-            options={ENV_NAME_OPTIONS}
+          <InputField
+            label="Environment Name"
+            required
+            placeholder="e.g. dev, staging, prod, uat"
             value={envName}
-            onChange={setEnvName}
+            onChange={(e) => setEnvName(e.target.value)}
           />
 
           <CustomDropdown
