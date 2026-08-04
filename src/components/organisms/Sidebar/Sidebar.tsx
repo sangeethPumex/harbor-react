@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   FolderKanban,
-  History as HistoryIcon,
+  // History as HistoryIcon,
   Users,
   Users2,
   Settings as SettingsIcon,
@@ -20,7 +20,7 @@ const MENU_ITEMS = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/projects", label: "Projects", icon: FolderKanban },
   { href: "/team", label: "Team", icon: Users2 },
-  { href: "/history", label: "History", icon: HistoryIcon },
+  // { href: "/history", label: "History", icon: HistoryIcon },
   { href: "/users", label: "Users", icon: Users },
   { href: "/settings", label: "Settings", icon: SettingsIcon },
   { href: "/notifications", label: "Notifications", icon: Bell },
@@ -44,7 +44,11 @@ export const Sidebar: React.FC = () => {
       {/* HEADER */}
       <div className="flex items-center justify-between px-4 py-4 border-b border-black/5 h-16 shrink-0">
         <div className="flex items-center gap-2.5 select-none">
-          <img src="/harbor-logo.svg" alt="Harbor Logo" className="h-7 w-auto animate-fade-in" />
+          <img
+            src="/harbor-logo.svg"
+            alt="Harbor Logo"
+            className="h-7 w-auto animate-fade-in"
+          />
           {!collapsed && (
             <span className="font-extrabold text-[15px] tracking-tight text-[#1a1a1a] animate-fade-in">
               Harbor
@@ -91,7 +95,9 @@ export const Sidebar: React.FC = () => {
               {!collapsed && (
                 <span
                   className={`text-[14px] flex-1 ${
-                    isActive ? "text-[#1a1a1a] font-semibold" : "text-[#3f372f] font-medium"
+                    isActive
+                      ? "text-[#1a1a1a] font-semibold"
+                      : "text-[#3f372f] font-medium"
                   }`}
                 >
                   {item.label}
@@ -111,7 +117,10 @@ export const Sidebar: React.FC = () => {
 
       {/* FOOTER PROFILE */}
       <div className="border-t border-black/5 px-3 py-3 relative">
-        <div onClick={() => setShowLogout(!showLogout)} className="cursor-pointer group">
+        <div
+          onClick={() => setShowLogout(!showLogout)}
+          className="cursor-pointer group"
+        >
           {!collapsed ? (
             <div className="flex items-center gap-3">
               {/* Avatar with custom gradient */}
@@ -121,13 +130,22 @@ export const Sidebar: React.FC = () => {
               </div>
 
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium text-[#1a1a1a] truncate" title="Admin">
+                <p
+                  className="text-sm font-medium text-[#1a1a1a] truncate"
+                  title="Admin"
+                >
                   Admin
                 </p>
-                <p className="text-[10px] text-[#8a7f75] truncate" title="admin@harbor.com">
+                <p
+                  className="text-[10px] text-[#8a7f75] truncate"
+                  title="admin@harbor.com"
+                >
                   admin@harbor.com
                 </p>
-                <p className="text-[11px] font-medium text-primary/70 truncate" title="Workspace">
+                <p
+                  className="text-[11px] font-medium text-primary/70 truncate"
+                  title="Workspace"
+                >
                   Workspace
                 </p>
               </div>
@@ -149,9 +167,7 @@ export const Sidebar: React.FC = () => {
 
         {/* Logout Popover */}
         {showLogout && (
-          <div
-            className="absolute bottom-full mb-2 left-3 right-3 bg-white rounded-md shadow-lg border border-black/5 p-1 z-50"
-          >
+          <div className="absolute bottom-full mb-2 left-3 right-3 bg-white rounded-md shadow-lg border border-black/5 p-1 z-50">
             <button
               onClick={() => {
                 localStorage.removeItem("harbor_logged_in");

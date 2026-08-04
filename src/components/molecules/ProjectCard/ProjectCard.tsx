@@ -2,7 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
-import { GitBranch, FolderOpen, ArrowRight } from "lucide-react";
+import { GitBranch, FolderOpen, ArrowRight, Trash2 } from "lucide-react";
 
 export interface Project {
   id: string;
@@ -19,9 +19,10 @@ export interface Project {
 
 interface ProjectCardProps {
   project: Project;
+  onDelete?: (id: string, name: string) => void;
 }
 
-export const ProjectCard: React.FC<ProjectCardProps> = ({ project }) => {
+export const ProjectCard: React.FC<ProjectCardProps> = ({ project, onDelete }) => {
   const totalEnvs = project.healthyCount + project.unhealthyCount;
 
   // Calculate health bar percentages
@@ -39,15 +40,29 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({ project }) => {
     <div className="group bg-white border border-black/5 hover:border-[#d08873]/30 rounded-md p-4 hover:shadow-sm transition-all duration-200">
       {/* Header */}
       <div className="flex justify-between items-start gap-3 mb-3">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 min-w-0">
           <span className={`h-2 w-2 rounded-full shrink-0 ${statusDots[project.status]}`} />
-          <h3 className="text-sm font-semibold text-[#1a1a1a] group-hover:text-[#d08873] transition-colors duration-200">
+          <h3 className="text-sm font-semibold text-[#1a1a1a] group-hover:text-[#d08873] transition-colors duration-200 truncate">
             {project.name}
           </h3>
         </div>
-        <span className="bg-[#fdfcf9] border border-black/5 text-[#8a7f75] text-[11px] font-medium px-2 py-0.5 rounded-sm">
-          {totalEnvs} Envs
-        </span>
+        <div className="flex items-center gap-2 shrink-0">
+          <span className="bg-[#fdfcf9] border border-black/5 text-[#8a7f75] text-[11px] font-medium px-2 py-0.5 rounded-sm">
+            {totalEnvs} Envs
+          </span>
+          {onDelete && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete(project.id, project.name);
+              }}
+              title="Delete Project"
+              className="text-[#a89587] hover:text-[#c62828] p-1 rounded hover:bg-[#fdf5f2] transition-colors cursor-pointer"
+            >
+              <Trash2 size={13} />
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Description */}

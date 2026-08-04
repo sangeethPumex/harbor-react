@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Play, RotateCcw, History, ArrowRight, CheckCircle2, AlertCircle, Database, HelpCircle, Terminal } from "lucide-react";
+import { Play, RotateCcw, History, ArrowRight, AlertCircle, Terminal } from "lucide-react";
 import { AppLayout } from "@/components/templates/AppLayout/AppLayout";
 import { Button } from "@/components/atoms/Button/Button";
 import { Badge } from "@/components/atoms/Badge/Badge";
@@ -346,9 +346,9 @@ export default function EnvironmentDetailPage() {
               <div className="flex items-center gap-2">
                 <Terminal size={15} className="text-[#d08873]" />
                 <h2 className="text-sm font-semibold text-[#1a1a1a]">
-                  CloudWatch Logs
+                  GitHub Actions Logs
                 </h2>
-                <span className="text-[11px] text-[#8a7f75] font-medium">Last {cloudWatchLogs?.length || 0} lines - /ecs/{formattedProjName}/{formattedEnvName}</span>
+                <span className="text-[11px] text-[#8a7f75] font-medium">Last {cloudWatchLogs?.length || 0} runs &bull; {formattedEnvName}</span>
               </div>
               <button className="text-xs border border-black/5 hover:bg-[#faf9f8] px-2.5 py-1 rounded-sm text-[#6b5e52] font-semibold cursor-pointer">
                 Expand
@@ -364,7 +364,7 @@ export default function EnvironmentDetailPage() {
                     log.level === "WARN" ? "text-[#ffbe5c]" :
                     "text-[#80dd6d]"
                   }>
-                    {log.level} {log.message}
+                    {log.message}
                   </span>
                 </div>
               ))}

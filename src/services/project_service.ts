@@ -47,4 +47,8 @@ export const projectService = {
     const response = await api.get(`/composition/project-environment-details/${id}/${envName}`);
     return response.data;
   },
+  deleteProject: async (id: string) => {
+    const response = await api.delete(`/projects/${id}`);
+    return response.data;
+  },
 };
