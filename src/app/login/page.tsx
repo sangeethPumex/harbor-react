@@ -11,7 +11,7 @@ import { toast } from "sonner";
 import { z } from "zod";
 import { authService } from "@/services/auth_service";
 import { useAppDispatch } from "@/store/hooks";
-import { setToken } from "@/store/slices/authSlice";
+import { setToken, setCredentials } from "@/store/slices/authSlice";
 
 type LoginMode = "pin" | "password";
 
@@ -62,7 +62,7 @@ export default function LoginPage() {
       toast.success("Login successful");
       const token = data.access_token || data.token;
       if (token) {
-        dispatch(setToken(token));
+        dispatch(setCredentials({ token, role: data.role }));
       }
       router.push("/dashboard");
     } catch (err: unknown) {
