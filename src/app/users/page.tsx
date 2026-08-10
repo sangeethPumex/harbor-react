@@ -13,6 +13,7 @@ import { EditUserModal } from "@/components/organisms/EditUserModal/EditUserModa
 import { useToast } from "@/components/atoms/Toast/Toast";
 import { userService } from "@/services/user_service";
 import { authService } from "@/services/auth_service";
+import { useAppSelector } from "@/store/hooks";
 
 const GithubIcon: React.FC<{ size?: number; className?: string }> = ({
   size = 14,
@@ -57,6 +58,9 @@ interface Member {
 const INITIAL_MEMBERS: Member[] = [];
 
 export default function UsersPage() {
+  const userRole = useAppSelector((state) => state.auth.role) || (typeof window !== "undefined" ? localStorage.getItem("harbor_user_role") : null);
+  const isAdmin = userRole ? userRole.toLowerCase().includes("admin") : false;
+
   const [members, setMembers] = useState<Member[]>(INITIAL_MEMBERS);
   const [inviteEmail, setInviteEmail] = useState("");
   const [isInviteOpen, setIsInviteOpen] = useState(true);
@@ -291,19 +295,21 @@ export default function UsersPage() {
           >
             View
           </Button>
-          <Button
-            size="sm"
-            variant="secondary"
-            className="px-2.5 py-1 text-xs border border-black/5 rounded-md hover:bg-[#faf9f8] cursor-pointer"
-            width="w-auto"
-            onClick={() => {
-              setSelectedEditUser(row);
-              setIsEditModalOpen(true);
-            }}
-          >
-            Edit
-          </Button>
-          {row.role !== "Admin" && (
+          {isAdmin && (
+            <Button
+              size="sm"
+              variant="secondary"
+              className="px-2.5 py-1 text-xs border border-black/5 rounded-md hover:bg-[#faf9f8] cursor-pointer"
+              width="w-auto"
+              onClick={() => {
+                setSelectedEditUser(row);
+                setIsEditModalOpen(true);
+              }}
+            >
+              Edit
+            </Button>
+          )}
+          {isAdmin && row.role !== "Admin" && (
             <Button
               size="sm"
               variant="secondary"
@@ -423,16 +429,18 @@ export default function UsersPage() {
           </p>
         </div>
 
-        <Button
-          size="sm"
-          variant="secondary"
-          icon={<UserPlus size={14} />}
-          onClick={() => setIsCreateModalOpen(true)}
-          className="cursor-pointer font-medium border border-black/5 hover:bg-[#faf9f8] text-sm text-[#2b2622]"
-          width="w-auto"
-        >
-          Add New Member
-        </Button>
+        {isAdmin && (
+          <Button
+            size="sm"
+            variant="secondary"
+            icon={<UserPlus size={14} />}
+            onClick={() => setIsCreateModalOpen(true)}
+            className="cursor-pointer font-medium border border-black/5 hover:bg-[#faf9f8] text-sm text-[#2b2622]"
+            width="w-auto"
+          >
+            Add New Member
+          </Button>
+        )}
       </div>
 
       {/* Active Members Table Container */}
